@@ -65,7 +65,7 @@ namespace ChisMet_lab1
             return res;
         }
 
-        public static 
+        //public static 
     }
 
     class Program
