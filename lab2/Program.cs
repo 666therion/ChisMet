@@ -18,10 +18,10 @@ namespace Lab3_Чисмет
         /// <summary>
         /// Вывод информации об итерации
         /// </summary>
-        public static void WriteInformation(int k, double[,] A, double[] PreviousValues, double[] b, int n, double q, double tau, double norm, bool last = false)
+        public static void WriteInformation(int k, double tau, double q, double norm, double delta, double[] x, bool last = false)
         {
             if (k < 50 || k % 100 == 0 || last)
-                Console.WriteLine("{0,15}|{1,15:0.00000}|{2,15:0.00000}|{3,15:0.00000}|{4,18:0.00000}|{5,15:0.00000}|{6,15:0.00000}|{7,15:0.00000}|{8,15:0.00000}", k, tau, q, norm, PreviousValues[0], PreviousValues[1], PreviousValues[2], PreviousValues[3]);
+                Console.WriteLine("{0,15}|{1,15:0.00000}|{2,15:0.00000}|{3,15:0.00000}|{4,18:0.00000}|{5,15:0.00000}|{6,15:0.00000}|{7,15:0.00000}|{8,15:0.00000}", k, tau, q, norm, delta, x[0], x[1], x[2], x[3]);
         }
 
         /// <summary>
@@ -181,38 +181,12 @@ namespace Lab3_Чисмет
         }
 
         /// <summary>
-        /// Расчетная формула. Метод простых итераций
-        /// </summary>
-        /// <param name="args"></param>
-        /// 
-        public static double[] SimpleIteration(double[,] A, double[] b, double[] PreviousValues, int n)
-        {
-            double y = 0.9;
-            double[] CurrentValues = new double[n];
-            if (MainDiagonalElements(A, n) != 0)
-            {
-                double sum = 0;
-
-                for (int i = 0; i < n; i++)
-                {
-                    sum = 0;
-                    for (int j = 0; j < n; j++)
-                    {
-                        sum += A[i, j] * PreviousValues[j];
-                    }
-                    CurrentValues[i] = PreviousValues[i] + (y * 2) / norm1(A, n) * (b[i] - sum);
-                }
-            }
-            return CurrentValues;
-        }
-
-        /// <summary>
         /// Норма матрицы кубическая
         /// </summary>
         /// <param name="A"></param>
         /// <param name="n"></param>
         /// <returns></returns>
-        public static double norm1(double[,] A, int n) //норма кубическая
+        public static double NormMatrix(double[,] A, int n) //норма кубическая
         {
             double norm = double.MinValue;
 
@@ -230,73 +204,6 @@ namespace Lab3_Чисмет
         }
 
         /// <summary>
-        /// Расчетная формула. Метод смежных градиентов
-        /// </summary>
-        /// <param name="args"></param>
-        /// 
-        public static double[] Gradient(double[,] A, double[] PreviousValues, double[] PreviousPreviousValues,
-            double Alpha, double[] b, int n)
-        {
-            double[] PreviousR = VectorR(A, PreviousPreviousValues, b, n);
-            return
-                SumVector(
-                    SumVector(
-                        MultDigitVector(Alpha, PreviousValues, n),
-                        MultDigitVector((1 - Alpha), PreviousPreviousValues, n), n),
-                        MultDigitVector(
-                            Tau(
-                                A,
-                               VectorR(A, PreviousValues, b, n),
-                                n) * Alpha,
-                            VectorR(A, PreviousValues, b, n),
-                            n),
-                    n);
-        }
-
-        /// <summary>
-        /// Расчетная формула. Метод наискорейшего спуска
-        /// </summary>
-        /// <param name="args"></param>
-        /// 
-        public static double[] SteepestDescent(double[,] A, double[] PreviousValues, double[] CurrentValues, double[] b, int n)
-        {
-            double[] PreviousR = VectorR(A, CurrentValues, b, n);
-            return SumVector(PreviousValues, MultDigitVector(SteepestDescentTau(A, PreviousR, n), PreviousR, n), n);
-        }
-
-        /// <summary>
-        /// Расчетная формула.Метод ПВР
-        /// </summary>
-        /// <param name="A"></param>
-        /// <param name="PreviousValues"></param>
-        /// <param name="b"></param>
-        /// <param name="n"></param>
-        /// <param name="w"></param>
-        /// <returns></returns>
-        public static double[] PVR(double[,] A, double[] PreviousValues, double[] b, int n, double w)
-        {
-            double[] CurrentValues = new double[n];
-            double sum1, sum2;
-            for (int i = 0; i < n; i++)
-            {
-                sum1 = 0;
-                sum2 = 0;
-                for (int j = 0; j < i; j++)
-                {
-                    sum1 += A[i, j] * CurrentValues[j];
-                }
-                for (int j = i + 1; j < n; j++)
-                {
-                    sum2 += A[i, j] * PreviousValues[j];
-                }
-                CurrentValues[i] = PreviousValues[i] + w * (1 / A[i, i] * (b[i] - sum1 - sum2) - PreviousValues[i]);
-            }
-            return CurrentValues;
-        }
-
-        
-
-        /// <summary>
         /// Вектор невязки
         /// </summary>
         /// <param name="A"></param>
@@ -312,18 +219,6 @@ namespace Lab3_Чисмет
                 r[i] = b[i] - r[i];
 
             return r;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="A"></param>
-        /// <param name="r"></param>
-        /// <param name="n"></param>
-        /// <returns></returns>
-        public static double Tau(double[,] A, double[] r, int n)
-        {
-            return MultVectors(r, r, n) / MultVectors(MultMatrixVector(A, r, n), r, n);
         }
 
         /// <summary>
@@ -432,35 +327,29 @@ namespace Lab3_Чисмет
         }
 
         /// <summary>
-        /// Норма матрицы евклидова
+        /// Расчетная формула. Метод простых итераций
         /// </summary>
-        /// <param name="A"></param>
-        /// <param name="n"></param>
-        /// <returns></returns>
-        public static double NormMatrix(double[,] A, int n)
+        /// <param name="args"></param>
+        /// 
+        public static double[] SimpleIteration(double[,] A, double[] b, double[] PreviousValues, int n)
         {
-            double maxlambda = double.MinValue;
-            double[] lambda;
-            double[,] z;
-            alglib.smatrixevd(MultMatrix(RevertMatrix(A, n), A, n), n, 0, false, out lambda, out z);
-            for (int i = 0; i < n; i++)
-                maxlambda = Math.Max(maxlambda, Math.Abs(lambda[i]));
-            return Math.Sqrt(maxlambda);
-        }
+            double y = 0.9;
+            double[] CurrentValues = new double[n];
+            if (MainDiagonalElements(A, n) != 0)
+            {
+                double sum = 0;
 
-        /// <summary>
-        /// Метод наискорейшего спуска.Альфа 
-        /// </summary>
-        /// <param name="PreviousR"></param>
-        /// <param name="PreviousPreviousR"></param>
-        /// <param name="T"></param>
-        /// <param name="PreviousT"></param>
-        /// <param name="PreviousAlpha"></param>
-        /// <param name="n"></param>
-        /// <returns></returns>
-        public static double SteepestDescentTau(double[,] A, double[] PreviousR, int n)
-        {
-            return MultVectors(PreviousR, PreviousR, n) / MultVectors(MultMatrixVector(A, PreviousR, n), PreviousR, n);
+                for (int i = 0; i < n; i++)
+                {
+                    sum = 0;
+                    for (int j = 0; j < n; j++)
+                    {
+                        sum += A[i, j] * PreviousValues[j];
+                    }
+                    CurrentValues[i] = PreviousValues[i] + (y * 2) / NormMatrix(A, n) * (b[i] - sum);
+                }
+            }
+            return CurrentValues;
         }
 
         /// <summary>
@@ -474,30 +363,31 @@ namespace Lab3_Чисмет
         public static double[] MetodOfSimpleIteration(double[,] A, double[] b, int n, double eps)
         {
             double y = 0.9;
+            double q;
+            double tau;
+            double normR;
             double[] PrePreviousValues = new double[n];
             double[] PreviousValues = new double[n];
             double[] CurrentValues = new double[n];
             int k = 1;
+
             WriteInformationHead();
+
             while (true)
             {
                 // значения неизвестных на текущей итерации
                 CurrentValues = SimpleIteration(A, b, PreviousValues, n);
 
                 // текущая погрешность относительно предыдущей итерации
-                double delta = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
+                q = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
+                normR = NormVector(VectorR(A, PreviousValues, b, n), n)/NormVector(CurrentValues, n);
+                tau = (y * 2) / NormMatrix(A, n);
 
-                double normR = NormVector(VectorR(A, PreviousValues, b, n), n)/NormVector(CurrentValues, n);
-                double normMatr = norm1(A, n);
-
-                WriteInformation(k, A, CurrentValues, b, n, delta, (y * 2) / normMatr, normR);
+                WriteInformation(k, tau, q, normR, 0, PreviousValues);
 
                 if (normR < eps)
-                {
-                    if (k > 50 && k % 100 != 0)
-                        WriteInformation(k, A, CurrentValues, b, n, delta, (y * 2) / normMatr, normR, true);
                     break;
-                }
+
                 //Переходим к следующей итерации. Предыдущие значения неизвестных становятся значениями на предпредыдущей итерации
                 PrePreviousValues = CopyVector(PreviousValues, n);
                 //Текущие значения неизвестных становятся значениями на предыдущей итерации
@@ -505,10 +395,43 @@ namespace Lab3_Чисмет
 
                 k++;
             }
+            WriteInformation(k, tau, q, normR, 0, PreviousValues, true);
             Console.WriteLine();
             Console.WriteLine("Количество итераций = " + k);
             Console.WriteLine();
             return PreviousValues;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="r"></param>
+        /// <param name="n"></param>
+        /// <returns></returns>
+        public static double Tau(double[,] A, double[] r, int n)
+        {
+            return MultVectors(r, r, n) / MultVectors(MultMatrixVector(A, r, n), r, n);
+        }
+
+        /// <summary>
+        /// Расчетная формула. Метод смежных градиентов
+        /// </summary>
+        /// <param name="args"></param>
+        /// 
+        public static double[] Gradient(double[,] A, double[] PreviousValues, double[] PreviousPreviousValues,
+            double Alpha, double[] b, int n)
+        {
+            double[] PreviousR = VectorR(A, PreviousPreviousValues, b, n);
+
+            return
+                SumVector(
+                    SumVector(
+                        MultDigitVector(Alpha, PreviousValues, n),
+                        MultDigitVector((1 - Alpha), PreviousPreviousValues, n), n),
+                    MultDigitVector(
+                        Tau(A, VectorR(A, PreviousValues, b, n), n) * Alpha,
+                        VectorR(A, PreviousValues, b, n), n), n);
         }
 
         /// <summary>
@@ -526,25 +449,27 @@ namespace Lab3_Чисмет
             double[] CurrentValues = new double[n];
             int k = 1;
             double Alpha = 1;
+            double q;
+            double normR;
+            double tau;
+
             WriteInformationHead();
+
             while (true)
             {
                 // значения неизвестных на текущей итерации
                 CurrentValues = Gradient(A, PreviousValues, PrePreviousValues, Alpha, b, n);
 
                 // текущая погрешность относительно предыдущей итерации
-                double delta = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
-
-                double normR = NormVector(VectorR(A, PreviousValues, b, n), n) / NormVector(CurrentValues, n);
-
-                WriteInformation(k, A, CurrentValues, b, n, delta, Tau(A, VectorR(A, PreviousValues, b, n), n), normR);
+                q = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
+                normR = NormVector(VectorR(A, PreviousValues, b, n), n) / NormVector(CurrentValues, n);
+                tau = Tau(A, VectorR(A, PreviousValues, b, n), n);
 
                 if (normR < eps)
-                {
-                    if (k > 50 && k % 100 != 0)
-                        WriteInformation(k, A, CurrentValues, b, n, delta, Tau(A, VectorR(A, PreviousValues, b, n), n), normR, true);
                     break;
-                }
+
+                WriteInformation(k, tau, q, normR, 0, PreviousValues);
+
                 //Переходим к следующей итерации. Предыдущие значения неизвестных становятся значениями на предпредыдущей итерации
                 PrePreviousValues = CopyVector(PreviousValues, n);
                 //Текущие значения неизвестных становятся значениями на предыдущей итерации
@@ -563,10 +488,37 @@ namespace Lab3_Чисмет
 
                 k++;
             }
+            WriteInformation(k, tau, q, normR, 0, PreviousValues, true);
             Console.WriteLine();
             Console.WriteLine("Количество итераций = " + k);
             Console.WriteLine();
             return PreviousValues;
+        }
+
+        /// <summary>
+        /// Метод наискорейшего спуска.Альфа 
+        /// </summary>
+        /// <param name="PreviousR"></param>
+        /// <param name="PreviousPreviousR"></param>
+        /// <param name="T"></param>
+        /// <param name="PreviousT"></param>
+        /// <param name="PreviousAlpha"></param>
+        /// <param name="n"></param>
+        /// <returns></returns>
+        public static double SteepestDescentTau(double[,] A, double[] PreviousR, int n)
+        {
+            return MultVectors(PreviousR, PreviousR, n) / MultVectors(MultMatrixVector(A, PreviousR, n), PreviousR, n);
+        }
+
+        /// <summary>
+        /// Расчетная формула. Метод наискорейшего спуска
+        /// </summary>
+        /// <param name="args"></param>
+        /// 
+        public static double[] SteepestDescent(double[,] A, double[] CurrentValues, double[] PreviousValues, double[] b, int n)
+        {
+            double[] PreviousR = VectorR(A, CurrentValues, b, n);
+            return SumVector(PreviousValues, MultDigitVector(SteepestDescentTau(A, PreviousR, n), PreviousR, n), n);
         }
 
         /// <summary>
@@ -578,27 +530,28 @@ namespace Lab3_Чисмет
             double[] PrePreviousValues = new double[n];
             double[] PreviousValues = new double[n];
             double[] CurrentValues = new double[n];
+            double q;
+            double normR;
+            double tau;
             int k = 1;
+
             WriteInformationHead();
+
             while (true)
             {
                 // значения неизвестных на текущей итерации
-                CurrentValues = SteepestDescent(A, PreviousValues, CurrentValues, b, n);
+                CurrentValues = SteepestDescent(A, CurrentValues, PreviousValues, b, n);
 
                 // текущая погрешность относительно предыдущей итерации
-                double delta = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
-
-                double normR = NormVector(VectorR(A, PreviousValues, b, n), n) / NormVector(CurrentValues, n);
-                double normMatr = norm1(A, n);
-                WriteInformation(k, A, CurrentValues, b, n, delta, Tau(A, VectorR(A, PreviousValues, b, n), n), normR);
+                q = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
+                normR = NormVector(VectorR(A, PreviousValues, b, n), n) / NormVector(CurrentValues, n);
+                tau = Tau(A, VectorR(A, PreviousValues, b, n), n);
 
                 if (normR < eps)
-                {
-                    if (k > 50 && k % 100 != 0)
-                        WriteInformation(k, A, CurrentValues, b, n, delta, Tau(A, VectorR(A, PreviousValues, b, n), n), normR, true);
-
                     break;
-                }
+
+                WriteInformation(k, tau, q, 0, normR, PreviousValues);
+
                 //Переходим к следующей итерации. Предыдущие значения неизвестных становятся значениями на предпредыдущей итерации
                 PrePreviousValues = CopyVector(PreviousValues, n);
                 //Текущие значения неизвестных становятся значениями на предыдущей итерации
@@ -609,6 +562,7 @@ namespace Lab3_Чисмет
 
                 k++;
             }
+            WriteInformation(k, tau, q, normR, 0, PreviousValues, true);
             Console.WriteLine();
             Console.WriteLine("Количество итераций = " + k);
             Console.WriteLine();
@@ -639,37 +593,66 @@ namespace Lab3_Чисмет
         }
 
         /// <summary>
+        /// Расчетная формула.Метод ПВР
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="PreviousValues"></param>
+        /// <param name="b"></param>
+        /// <param name="n"></param>
+        /// <param name="w"></param>
+        /// <returns></returns>
+        public static double[] PVR(double[,] A, double[] PreviousValues, double[] b, int n, double w)
+        {
+            double[] CurrentValues = new double[n];
+            double sum1, sum2;
+            for (int i = 0; i < n; i++)
+            {
+                sum1 = 0;
+                sum2 = 0;
+                for (int j = 0; j < i; j++)
+                {
+                    sum1 += A[i, j] * CurrentValues[j];
+                }
+                for (int j = i + 1; j < n; j++)
+                {
+                    sum2 += A[i, j] * PreviousValues[j];
+                }
+                CurrentValues[i] = PreviousValues[i] + w * (1 / A[i, i] * (b[i] - sum1 - sum2) - PreviousValues[i]);
+            }
+            return CurrentValues;
+        }
+
+        /// <summary>
         /// Метод ПВР
         /// </summary>
         /// <param name="args"></param>
-        public static double[] MetodPVR(double[,] A, double[] b, double w, int n, double eps, out int k, bool flag = false)
+        public static double[] MetodPVR(double[,] A, double[] b, double w, int n, double eps, out int k, bool WriteRes = false)
         {
             double[] PrePreviousValues = new double[n];
             double[] PreviousValues = new double[n];
             double[] CurrentValues = new double[n];
+            double q;
+            double normR;
             k = 1;
-            if (flag)
+
+            if (WriteRes)
                 WriteInformationHead();
+
             while (true)
             {
                 // значения неизвестных на текущей итерации
                 CurrentValues = PVR(A, PreviousValues, b, n, w);
 
                 // текущая погрешность относительно предыдущей итерации
-                double delta = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
-
-                double normR = NormVector(VectorR(A, PreviousValues, b, n), n) / NormVector(CurrentValues, n);
-                double normMatr = norm1(A, n);
-                if (flag)
-                    WriteInformation(k, A, CurrentValues, b, n, delta, w, normR);
+                q = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
+                normR = NormVector(VectorR(A, PreviousValues, b, n), n) / NormVector(CurrentValues, n);
 
                 if (normR < eps)
-                {
-                    if (flag && k > 50 && k % 100 != 0)
-                        WriteInformation(k, A, CurrentValues, b, n, delta, w, normR);
-
                     break;
-                }
+
+                if (WriteRes)
+                    WriteInformation(k, w, q, normR, 0, PreviousValues);
+
                 //Переходим к следующей итерации. Предыдущие значения неизвестных становятся значениями на предпредыдущей итерации
                 PrePreviousValues = CopyVector(PreviousValues, n);
                 //Текущие значения неизвестных становятся значениями на предыдущей итерации
@@ -680,8 +663,9 @@ namespace Lab3_Чисмет
 
                 k++;
             }
-            if (flag)
+            if (WriteRes)
             {
+                WriteInformation(k, w, q, normR, 0, PreviousValues, true);
                 Console.WriteLine();
                 Console.WriteLine("Количество итераций = " + k);
                 Console.WriteLine();
@@ -705,7 +689,7 @@ namespace Lab3_Чисмет
             double[] SD = new double[n]; // вектор x
             double[] PVR = new double[n]; // вектор x
 
-            ReadMatrix(A, n, "inputtest.txt");// считываем матрицу A из файл
+            ReadMatrix(A, n, "Input11.txt");// считываем матрицу A из файл
 
             Console.WriteLine("eps:" + eps);// выведем e
 
@@ -717,7 +701,7 @@ namespace Lab3_Чисмет
             Console.WriteLine("b: ");// выведем вектор b
             WriteVector(b, n);
 
-            Console.WriteLine("Норма матрицы = " + norm1(A, n));
+            Console.WriteLine("Норма матрицы = " + NormMatrix(A, n));
             Console.WriteLine();
 
             Console.WriteLine("Метод простых итераций: ");
