@@ -8,12 +8,20 @@ namespace Lab3_Чисмет
     class Program
     {
         /// <summary>
+        /// Вывод информации. Заголовок
+        /// </summary>
+        public static void WriteInformationHead()
+        {
+            Console.WriteLine("{0,15}|{1,15}|{2,15}|{3,15}|{4,18}|{5,15}|{6,15}|{7,15}|{8,15}", "Itr", "tau", "q", "Норма невязки", "Оценка погрешности", "x[1]", "x[2]", "x[3]", "x[4]");
+        }
+
+        /// <summary>
         /// Вывод информации об итерации
         /// </summary>
-        public static void WriteInformation(int k, double[,] A, double[] PreviousValues, double[] b, int n, double delta)
+        public static void WriteInformation(int k, double[,] A, double[] PreviousValues, double[] b, int n, double q, double tau, double norm, bool last = false)
         {
-            string head = "";
-            Console.WriteLine("{0,15}|{0,15}", k, delta);
+            if (k < 50 || k % 100 == 0 || last)
+                Console.WriteLine("{0,15}|{1,15:0.00000}|{2,15:0.00000}|{3,15:0.00000}|{4,18:0.00000}|{5,15:0.00000}|{6,15:0.00000}|{7,15:0.00000}|{8,15:0.00000}", k, tau, q, norm, PreviousValues[0], PreviousValues[1], PreviousValues[2], PreviousValues[3]);
         }
 
         /// <summary>
@@ -163,6 +171,15 @@ namespace Lab3_Чисмет
             return C;
         }
 
+        public static double[] DiffVector(double[] A, double[] B, int n)
+        {
+            double[] C = new double[n];
+            for (int i = 0; i < n; i++)
+                C[i] = A[i] - B[i];
+
+            return C;
+        }
+
         /// <summary>
         /// Расчетная формула. Метод простых итераций
         /// </summary>
@@ -189,6 +206,12 @@ namespace Lab3_Чисмет
             return CurrentValues;
         }
 
+        /// <summary>
+        /// Норма матрицы кубическая
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="n"></param>
+        /// <returns></returns>
         public static double norm1(double[,] A, int n) //норма кубическая
         {
             double norm = double.MinValue;
@@ -206,7 +229,6 @@ namespace Lab3_Чисмет
             return norm;
         }
 
-
         /// <summary>
         /// Расчетная формула. Метод смежных градиентов
         /// </summary>
@@ -215,22 +237,19 @@ namespace Lab3_Чисмет
         public static double[] Gradient(double[,] A, double[] PreviousValues, double[] PreviousPreviousValues,
             double Alpha, double[] b, int n)
         {
-            double[] PreviousR = GradientR(A, PreviousPreviousValues, b, n);
+            double[] PreviousR = VectorR(A, PreviousPreviousValues, b, n);
             return
                 SumVector(
                     SumVector(
                         MultDigitVector(Alpha, PreviousValues, n),
                         MultDigitVector((1 - Alpha), PreviousPreviousValues, n), n),
-                    MultDigitVector(
-                        -1,
                         MultDigitVector(
-                            GradientT(
+                            Tau(
                                 A,
-                                GradientR(A, PreviousValues, b, n),
+                               VectorR(A, PreviousValues, b, n),
                                 n) * Alpha,
-                            GradientR(A, PreviousValues, b, n),
+                            VectorR(A, PreviousValues, b, n),
                             n),
-                        n),
                     n);
         }
 
@@ -239,11 +258,43 @@ namespace Lab3_Чисмет
         /// </summary>
         /// <param name="args"></param>
         /// 
-        public static double[] SteepestDescent(double[,] A, double[] PreviousValues, double[] PreviousPreviousValues, double[] b, int n)
+        public static double[] SteepestDescent(double[,] A, double[] PreviousValues, double[] CurrentValues, double[] b, int n)
         {
-            double[] PreviousR = GradientR(A, PreviousPreviousValues, b, n);
-            return SumVector(PreviousValues, MultDigitVector(-1 * SteepestDescentAlpha(A, PreviousR, n), PreviousR, n), n);
+            double[] PreviousR = VectorR(A, CurrentValues, b, n);
+            return SumVector(PreviousValues, MultDigitVector(SteepestDescentTau(A, PreviousR, n), PreviousR, n), n);
         }
+
+        /// <summary>
+        /// Расчетная формула.Метод ПВР
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="PreviousValues"></param>
+        /// <param name="b"></param>
+        /// <param name="n"></param>
+        /// <param name="w"></param>
+        /// <returns></returns>
+        public static double[] PVR(double[,] A, double[] PreviousValues, double[] b, int n, double w)
+        {
+            double[] CurrentValues = new double[n];
+            double sum1, sum2;
+            for (int i = 0; i < n; i++)
+            {
+                sum1 = 0;
+                sum2 = 0;
+                for (int j = 0; j < i; j++)
+                {
+                    sum1 += A[i, j] * CurrentValues[j];
+                }
+                for (int j = i + 1; j < n; j++)
+                {
+                    sum2 += A[i, j] * PreviousValues[j];
+                }
+                CurrentValues[i] = PreviousValues[i] + w * (1 / A[i, i] * (b[i] - sum1 - sum2) - PreviousValues[i]);
+            }
+            return CurrentValues;
+        }
+
+        
 
         /// <summary>
         /// Вектор невязки
@@ -253,12 +304,12 @@ namespace Lab3_Чисмет
         /// <param name="b"></param>
         /// <param name="n"></param>
         /// <returns></returns>
-        public static double[] GradientR(double[,] A, double[] PreviousValues, double[] b, int n)
+        public static double[] VectorR(double[,] A, double[] PreviousValues, double[] b, int n)
         {
             double[] r = MultMatrixVector(A, PreviousValues, n);
 
             for (int i = 0; i < n; i++)
-                r[i] -= b[i];
+                r[i] = b[i] - r[i];
 
             return r;
         }
@@ -270,13 +321,13 @@ namespace Lab3_Чисмет
         /// <param name="r"></param>
         /// <param name="n"></param>
         /// <returns></returns>
-        public static double GradientT(double[,] A, double[] r, int n)
+        public static double Tau(double[,] A, double[] r, int n)
         {
             return MultVectors(r, r, n) / MultVectors(MultMatrixVector(A, r, n), r, n);
         }
 
         /// <summary>
-        /// Альфа 
+        /// Метод смежных градиентов.Альфа 
         /// </summary>
         /// <param name="PreviousR"></param>
         /// <param name="PreviousPreviousR"></param>
@@ -293,7 +344,7 @@ namespace Lab3_Чисмет
         }
 
         /// <summary>
-        /// Норма вектора
+        /// Норма вектора кубическая
         /// </summary>
         /// <param name="A"></param>
         /// <param name="n"></param>
@@ -381,7 +432,7 @@ namespace Lab3_Чисмет
         }
 
         /// <summary>
-        /// Норма матрицы
+        /// Норма матрицы евклидова
         /// </summary>
         /// <param name="A"></param>
         /// <param name="n"></param>
@@ -398,7 +449,7 @@ namespace Lab3_Чисмет
         }
 
         /// <summary>
-        /// Альфа 
+        /// Метод наискорейшего спуска.Альфа 
         /// </summary>
         /// <param name="PreviousR"></param>
         /// <param name="PreviousPreviousR"></param>
@@ -407,7 +458,7 @@ namespace Lab3_Чисмет
         /// <param name="PreviousAlpha"></param>
         /// <param name="n"></param>
         /// <returns></returns>
-        public static double SteepestDescentAlpha(double[,] A, double[] PreviousR, int n)
+        public static double SteepestDescentTau(double[,] A, double[] PreviousR, int n)
         {
             return MultVectors(PreviousR, PreviousR, n) / MultVectors(MultMatrixVector(A, PreviousR, n), PreviousR, n);
         }
@@ -427,6 +478,7 @@ namespace Lab3_Чисмет
             double[] PreviousValues = new double[n];
             double[] CurrentValues = new double[n];
             int k = 1;
+            WriteInformationHead();
             while (true)
             {
                 // значения неизвестных на текущей итерации
@@ -435,16 +487,17 @@ namespace Lab3_Чисмет
                 // текущая погрешность относительно предыдущей итерации
                 double delta = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
 
-                WriteInformation(k, A, PreviousValues, b, n, delta);
-
+                double normR = NormVector(VectorR(A, PreviousValues, b, n), n)/NormVector(CurrentValues, n);
                 double normMatr = norm1(A, n);
-                Console.WriteLine("Тета = " + (y * 2) / normMatr);
-                Console.WriteLine();
 
-                double normR = NormVector(GradientR(A, PreviousValues, b, n), n);
+                WriteInformation(k, A, CurrentValues, b, n, delta, (y * 2) / normMatr, normR);
 
                 if (normR < eps)
+                {
+                    if (k > 50 && k % 100 != 0)
+                        WriteInformation(k, A, CurrentValues, b, n, delta, (y * 2) / normMatr, normR, true);
                     break;
+                }
                 //Переходим к следующей итерации. Предыдущие значения неизвестных становятся значениями на предпредыдущей итерации
                 PrePreviousValues = CopyVector(PreviousValues, n);
                 //Текущие значения неизвестных становятся значениями на предыдущей итерации
@@ -452,6 +505,7 @@ namespace Lab3_Чисмет
 
                 k++;
             }
+            Console.WriteLine();
             Console.WriteLine("Количество итераций = " + k);
             Console.WriteLine();
             return PreviousValues;
@@ -472,6 +526,7 @@ namespace Lab3_Чисмет
             double[] CurrentValues = new double[n];
             int k = 1;
             double Alpha = 1;
+            WriteInformationHead();
             while (true)
             {
                 // значения неизвестных на текущей итерации
@@ -480,30 +535,35 @@ namespace Lab3_Чисмет
                 // текущая погрешность относительно предыдущей итерации
                 double delta = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
 
-                WriteInformation(k, A, PreviousValues, b, n, delta);
-                Console.WriteLine("Альфа = " + Alpha);
-                Console.WriteLine();
+                double normR = NormVector(VectorR(A, PreviousValues, b, n), n) / NormVector(CurrentValues, n);
 
-                if (delta < eps)
+                WriteInformation(k, A, CurrentValues, b, n, delta, Tau(A, VectorR(A, PreviousValues, b, n), n), normR);
+
+                if (normR < eps)
+                {
+                    if (k > 50 && k % 100 != 0)
+                        WriteInformation(k, A, CurrentValues, b, n, delta, Tau(A, VectorR(A, PreviousValues, b, n), n), normR, true);
                     break;
+                }
                 //Переходим к следующей итерации. Предыдущие значения неизвестных становятся значениями на предпредыдущей итерации
                 PrePreviousValues = CopyVector(PreviousValues, n);
                 //Текущие значения неизвестных становятся значениями на предыдущей итерации
                 PreviousValues = CopyVector(CurrentValues, n);
 
-                double[] R = GradientR(A, PreviousValues, b, n);
-                double[] PreviousR = GradientR(A, PrePreviousValues, b, n);
+                double[] R = VectorR(A, PreviousValues, b, n);
+                double[] PreviousR = VectorR(A, PrePreviousValues, b, n);
 
                 Alpha = GradientAlpha(
                     R,
                     PreviousR,
-                    GradientT(A, R, n),
-                    GradientT(A, PreviousR, n),
+                    Tau(A, R, n),
+                    Tau(A, PreviousR, n),
                     Alpha,
                     n);
 
                 k++;
             }
+            Console.WriteLine();
             Console.WriteLine("Количество итераций = " + k);
             Console.WriteLine();
             return PreviousValues;
@@ -519,38 +579,125 @@ namespace Lab3_Чисмет
             double[] PreviousValues = new double[n];
             double[] CurrentValues = new double[n];
             int k = 1;
+            WriteInformationHead();
             while (true)
             {
                 // значения неизвестных на текущей итерации
-                CurrentValues = SteepestDescent(A, PreviousValues, PrePreviousValues, b, n);
+                CurrentValues = SteepestDescent(A, PreviousValues, CurrentValues, b, n);
 
                 // текущая погрешность относительно предыдущей итерации
                 double delta = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
 
-                WriteInformation(k, A, PreviousValues, b, n, delta);
+                double normR = NormVector(VectorR(A, PreviousValues, b, n), n) / NormVector(CurrentValues, n);
+                double normMatr = norm1(A, n);
+                WriteInformation(k, A, CurrentValues, b, n, delta, Tau(A, VectorR(A, PreviousValues, b, n), n), normR);
 
-                if (delta < eps)
+                if (normR < eps)
+                {
+                    if (k > 50 && k % 100 != 0)
+                        WriteInformation(k, A, CurrentValues, b, n, delta, Tau(A, VectorR(A, PreviousValues, b, n), n), normR, true);
+
                     break;
+                }
                 //Переходим к следующей итерации. Предыдущие значения неизвестных становятся значениями на предпредыдущей итерации
                 PrePreviousValues = CopyVector(PreviousValues, n);
                 //Текущие значения неизвестных становятся значениями на предыдущей итерации
                 PreviousValues = CopyVector(CurrentValues, n);
 
-                double[] R = GradientR(A, PreviousValues, b, n);
-                double[] PreviousR = GradientR(A, PrePreviousValues, b, n);
+                double[] R = VectorR(A, PreviousValues, b, n);
+                double[] PreviousR = VectorR(A, PrePreviousValues, b, n);
 
                 k++;
             }
+            Console.WriteLine();
             Console.WriteLine("Количество итераций = " + k);
             Console.WriteLine();
             return PreviousValues;
         }
 
+        public static double[] PVRW(double[,] A, double[] b, int n, double eps)
+        {
+            double min_itr = double.MaxValue;
+            double target_w = 0;
+            int k;
+            for (double w = 0.10; w < 2; w += 0.10)
+            {
+                k = 1;
+                MetodPVR(A, b, w, n, 0.01, out k);
+                Console.WriteLine("{0,10}{1,10}", "w = " + w, "  itr = " + k);
+                if (min_itr > k)
+                {
+                    min_itr = k;
+                    target_w = w;
+                }
+            }
+            k = 1;
+            Console.WriteLine();
+            Console.WriteLine("w = " + target_w + "  min_itr = " + min_itr);
+            Console.WriteLine();
+            return MetodPVR(A, b, target_w, n, eps, out k, true);
+        }
+
+        /// <summary>
+        /// Метод ПВР
+        /// </summary>
+        /// <param name="args"></param>
+        public static double[] MetodPVR(double[,] A, double[] b, double w, int n, double eps, out int k, bool flag = false)
+        {
+            double[] PrePreviousValues = new double[n];
+            double[] PreviousValues = new double[n];
+            double[] CurrentValues = new double[n];
+            k = 1;
+            if (flag)
+                WriteInformationHead();
+            while (true)
+            {
+                // значения неизвестных на текущей итерации
+                CurrentValues = PVR(A, PreviousValues, b, n, w);
+
+                // текущая погрешность относительно предыдущей итерации
+                double delta = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
+
+                double normR = NormVector(VectorR(A, PreviousValues, b, n), n) / NormVector(CurrentValues, n);
+                double normMatr = norm1(A, n);
+                if (flag)
+                    WriteInformation(k, A, CurrentValues, b, n, delta, w, normR);
+
+                if (normR < eps)
+                {
+                    if (flag && k > 50 && k % 100 != 0)
+                        WriteInformation(k, A, CurrentValues, b, n, delta, w, normR);
+
+                    break;
+                }
+                //Переходим к следующей итерации. Предыдущие значения неизвестных становятся значениями на предпредыдущей итерации
+                PrePreviousValues = CopyVector(PreviousValues, n);
+                //Текущие значения неизвестных становятся значениями на предыдущей итерации
+                PreviousValues = CopyVector(CurrentValues, n);
+
+                double[] R = VectorR(A, PreviousValues, b, n);
+                double[] PreviousR = VectorR(A, PrePreviousValues, b, n);
+
+                k++;
+            }
+            if (flag)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Количество итераций = " + k);
+                Console.WriteLine();
+            }
+            return PreviousValues;
+        }
+
+        //public static double Cond(double[,] A, double[] x, int n)
+        //{
+
+        //}
+
         static void Main(string[] args)
         {
             double eps = 0.0001;
             int n = 4;//размерность матрицы
-            double[] x = { 0, 0, 0, 0 }; // вектор x
             double[] b = { 1, 2, 3, 4 }; //new double[n]; // вектор b
             double[,] A = new double[n, n];//матрица А
             double[] SI = new double[n]; // вектор x
@@ -562,30 +709,36 @@ namespace Lab3_Чисмет
 
             Console.WriteLine("eps:" + eps);// выведем e
 
-            Console.WriteLine("x:");// выведем вектор x
-            WriteVector(x, n);
-
             Console.WriteLine("A: ");// выведем матрицу А
             WriteMatrix(A, n);
+
 
             //b = MultMatrixVector(A, x, n); //найдем решение уравнения
             Console.WriteLine("b: ");// выведем вектор b
             WriteVector(b, n);
+
+            Console.WriteLine("Норма матрицы = " + norm1(A, n));
+            Console.WriteLine();
 
             Console.WriteLine("Метод простых итераций: ");
             SI = MetodOfSimpleIteration(A, b, n, eps);
             Console.WriteLine("x: ");// выведем вектор X
             WriteVector(SI, n);
 
-            Console.WriteLine("Метод сопряженных градиентов: ");
-            G = MetodGradient(A, b, n, eps);
-            Console.WriteLine("x: ");// выведем вектор X
-            WriteVector(G, n);
-
             Console.WriteLine("Метод наискорейшего спуска: ");
             SD = MetodSteepestDescent(A, b, n, eps);
             Console.WriteLine("x: ");// выведем вектор X
             WriteVector(SD, n);
+
+            Console.WriteLine("Метод ПВР: ");
+            PVR = PVRW(A, b, n, eps);
+            Console.WriteLine("x: ");// выведем вектор X
+            WriteVector(PVR, n);
+
+            Console.WriteLine("Метод сопряженных градиентов: ");
+            G = MetodGradient(A, b, n, eps);
+            Console.WriteLine("x: ");// выведем вектор X
+            WriteVector(G, n);
 
             Console.ReadKey();
         }
