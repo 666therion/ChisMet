@@ -24,6 +24,12 @@ namespace Lab3_Чисмет
                 Console.WriteLine("{0,15}|{1,15:0.00000}|{2,15:0.00000}|{3,15:0.00000}|{4,18:0.00000}|{5,15:0.00000}|{6,15:0.00000}|{7,15:0.00000}|{8,15:0.00000}", k, tau, q, norm, delta, x[0], x[1], x[2], x[3]);
         }
 
+        public static void WriteInformationGradient(int k, double tau, double q, double norm, double delta, double[] x, double alpha, bool last = false)
+        {
+            if (k < 50 || k % 100 == 0 || last)
+                Console.WriteLine("{0,15}|{1,15:0.00000}|{2,15:0.00000}|{3,15:0.00000}|{4,18:0.00000}|{5,15:0.00000}|{6,15:0.00000}|{7,15:0.00000}|{8,15:0.00000}|{9,15:0.00000}", k, tau, q, norm, delta, x[0], x[1], x[2], x[3], alpha);
+        }
+
         /// <summary>
         /// Вывод матрицы
         /// </summary>
@@ -294,6 +300,17 @@ namespace Lab3_Чисмет
             return res;
         }
 
+        public static double[,] CopyMatrix(double[,] M, int n) // копирование матрицы
+        {
+            double[,] res = new double[n, n];
+
+            for (int i = 0; i < n; i++)
+                for (int j = 0; j < n; j++)
+                    res[i, j] = M[i, j];
+
+            return res;
+        }
+
         /// <summary>
         /// Умножение матриц
         /// </summary>
@@ -366,6 +383,7 @@ namespace Lab3_Чисмет
             double q;
             double tau;
             double normR;
+            double delta = 0;
             double[] PrePreviousValues = new double[n];
             double[] PreviousValues = new double[n];
             double[] CurrentValues = new double[n];
@@ -380,10 +398,11 @@ namespace Lab3_Чисмет
 
                 // текущая погрешность относительно предыдущей итерации
                 q = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
+                delta = NormVector(DiffVector(CurrentValues, PreviousValues, n), n) * (1 - q) / q;
                 normR = NormVector(VectorR(A, PreviousValues, b, n), n)/NormVector(CurrentValues, n);
                 tau = (y * 2) / NormMatrix(A, n);
 
-                WriteInformation(k, tau, q, normR, 0, PreviousValues);
+                WriteInformation(k, tau, q, normR, delta, PreviousValues);
 
                 if (normR < eps)
                     break;
@@ -395,7 +414,7 @@ namespace Lab3_Чисмет
 
                 k++;
             }
-            WriteInformation(k, tau, q, normR, 0, PreviousValues, true);
+            WriteInformation(k, tau, q, normR, delta, PreviousValues, true);
             Console.WriteLine();
             Console.WriteLine("Количество итераций = " + k);
             Console.WriteLine();
@@ -451,6 +470,7 @@ namespace Lab3_Чисмет
             double Alpha = 1;
             double q;
             double normR;
+            double delta;
             double tau;
 
             WriteInformationHead();
@@ -462,13 +482,14 @@ namespace Lab3_Чисмет
 
                 // текущая погрешность относительно предыдущей итерации
                 q = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
+                delta = NormVector(DiffVector(CurrentValues, PreviousValues, n), n) * (1 - q) / q;
                 normR = NormVector(VectorR(A, PreviousValues, b, n), n) / NormVector(CurrentValues, n);
                 tau = Tau(A, VectorR(A, PreviousValues, b, n), n);
 
                 if (normR < eps)
                     break;
 
-                WriteInformation(k, tau, q, normR, 0, PreviousValues);
+                WriteInformationGradient(k, tau, q, normR, delta, PreviousValues, Alpha);
 
                 //Переходим к следующей итерации. Предыдущие значения неизвестных становятся значениями на предпредыдущей итерации
                 PrePreviousValues = CopyVector(PreviousValues, n);
@@ -488,7 +509,7 @@ namespace Lab3_Чисмет
 
                 k++;
             }
-            WriteInformation(k, tau, q, normR, 0, PreviousValues, true);
+            WriteInformationGradient(k, tau, q, normR, delta, PreviousValues, Alpha, true);
             Console.WriteLine();
             Console.WriteLine("Количество итераций = " + k);
             Console.WriteLine();
@@ -533,6 +554,7 @@ namespace Lab3_Чисмет
             double q;
             double normR;
             double tau;
+            double delta;
             int k = 1;
 
             WriteInformationHead();
@@ -544,13 +566,14 @@ namespace Lab3_Чисмет
 
                 // текущая погрешность относительно предыдущей итерации
                 q = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
+                delta = NormVector(DiffVector(CurrentValues, PreviousValues, n), n) * (1 - q) / q;
                 normR = NormVector(VectorR(A, PreviousValues, b, n), n) / NormVector(CurrentValues, n);
                 tau = Tau(A, VectorR(A, PreviousValues, b, n), n);
 
                 if (normR < eps)
                     break;
 
-                WriteInformation(k, tau, q, 0, normR, PreviousValues);
+                WriteInformation(k, tau, q, delta, normR, PreviousValues);
 
                 //Переходим к следующей итерации. Предыдущие значения неизвестных становятся значениями на предпредыдущей итерации
                 PrePreviousValues = CopyVector(PreviousValues, n);
@@ -562,7 +585,7 @@ namespace Lab3_Чисмет
 
                 k++;
             }
-            WriteInformation(k, tau, q, normR, 0, PreviousValues, true);
+            WriteInformation(k, tau, q, normR, delta, PreviousValues, true);
             Console.WriteLine();
             Console.WriteLine("Количество итераций = " + k);
             Console.WriteLine();
@@ -633,6 +656,7 @@ namespace Lab3_Чисмет
             double[] CurrentValues = new double[n];
             double q;
             double normR;
+            double delta;
             k = 1;
 
             if (WriteRes)
@@ -645,13 +669,14 @@ namespace Lab3_Чисмет
 
                 // текущая погрешность относительно предыдущей итерации
                 q = AssessmentOfNorms(CurrentValues, PreviousValues, PrePreviousValues, n);
+                delta = NormVector(DiffVector(CurrentValues, PreviousValues, n), n) * (1 - q) / q;
                 normR = NormVector(VectorR(A, PreviousValues, b, n), n) / NormVector(CurrentValues, n);
 
                 if (normR < eps)
                     break;
 
                 if (WriteRes)
-                    WriteInformation(k, w, q, normR, 0, PreviousValues);
+                    WriteInformation(k, w, q, normR, delta, PreviousValues);
 
                 //Переходим к следующей итерации. Предыдущие значения неизвестных становятся значениями на предпредыдущей итерации
                 PrePreviousValues = CopyVector(PreviousValues, n);
@@ -665,7 +690,7 @@ namespace Lab3_Чисмет
             }
             if (WriteRes)
             {
-                WriteInformation(k, w, q, normR, 0, PreviousValues, true);
+                WriteInformation(k, w, q, normR, delta, PreviousValues, true);
                 Console.WriteLine();
                 Console.WriteLine("Количество итераций = " + k);
                 Console.WriteLine();
@@ -689,7 +714,7 @@ namespace Lab3_Чисмет
             double[] SD = new double[n]; // вектор x
             double[] PVR = new double[n]; // вектор x
 
-            ReadMatrix(A, n, "Input11.txt");// считываем матрицу A из файл
+            ReadMatrix(A, n, "inputtest.txt");// считываем матрицу A из файл
 
             Console.WriteLine("eps:" + eps);// выведем e
 
@@ -724,6 +749,16 @@ namespace Lab3_Чисмет
             Console.WriteLine("x: ");// выведем вектор X
             WriteVector(G, n);
 
+            int info = 0;
+            alglib.matinvreport rep;
+            double[,] X = CopyMatrix(A, n);
+            alglib.rmatrixinverse(ref X, n, out info, out rep);
+            double cond = NormMatrix(A, n) * NormMatrix(X, n);
+            Console.WriteLine("Число обусловленности = " + cond);
+            Console.WriteLine("Теоретическая оценка чила итераций");
+            Console.WriteLine("Методы простой итерации и градиентного спуска {0:0}", (Math.Log(1 / eps) / 2) * cond);
+            Console.WriteLine("Методы cопряженных градиентов {0:0}", (Math.Log(2 / eps) / 2) * Math.Sqrt(cond));
+            Console.WriteLine("Метод релаксации {0:0}", (Math.Log(1 / eps) / 4) * Math.Sqrt(cond));
             Console.ReadKey();
         }
     }
